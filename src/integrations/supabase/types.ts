@@ -14,16 +14,169 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      events: {
+        Row: {
+          available_seats: number
+          category: string | null
+          created_at: string
+          created_by: string | null
+          date: string
+          description: string | null
+          id: string
+          image_url: string | null
+          price: number
+          title: string
+          total_seats: number
+          updated_at: string
+        }
+        Insert: {
+          available_seats?: number
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          date: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          price?: number
+          title: string
+          total_seats?: number
+          updated_at?: string
+        }
+        Update: {
+          available_seats?: number
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          date?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          price?: number
+          title?: string
+          total_seats?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          name: string | null
+          updated_at: string
+          user_id: string
+          wallet_address: string | null
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string | null
+          updated_at?: string
+          user_id: string
+          wallet_address?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string | null
+          updated_at?: string
+          user_id?: string
+          wallet_address?: string | null
+        }
+        Relationships: []
+      }
+      tickets: {
+        Row: {
+          booking_date: string
+          created_at: string
+          event_id: string
+          id: string
+          is_used: boolean
+          nft_token_id: string | null
+          qr_code_data: string | null
+          ticket_id: string
+          user_id: string
+          wallet_address: string | null
+        }
+        Insert: {
+          booking_date?: string
+          created_at?: string
+          event_id: string
+          id?: string
+          is_used?: boolean
+          nft_token_id?: string | null
+          qr_code_data?: string | null
+          ticket_id?: string
+          user_id: string
+          wallet_address?: string | null
+        }
+        Update: {
+          booking_date?: string
+          created_at?: string
+          event_id?: string
+          id?: string
+          is_used?: boolean
+          nft_token_id?: string | null
+          qr_code_data?: string | null
+          ticket_id?: string
+          user_id?: string
+          wallet_address?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tickets_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      book_ticket: {
+        Args: {
+          p_event_id: string
+          p_user_id: string
+          p_wallet_address?: string
+        }
+        Returns: string
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +303,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user"],
+    },
   },
 } as const
