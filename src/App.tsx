@@ -3,8 +3,21 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import Index from "./pages/Index.tsx";
-import NotFound from "./pages/NotFound.tsx";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { WalletProvider } from "@/contexts/WalletContext";
+import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
+import ChatbotButton from "@/components/ChatbotButton";
+import Events from "@/pages/Events";
+import EventDetails from "@/pages/EventDetails";
+import MyTickets from "@/pages/MyTickets";
+import AdminDashboard from "@/pages/AdminDashboard";
+import VerifyTicket from "@/pages/VerifyTicket";
+import Auth from "@/pages/Auth";
+import Contact from "@/pages/Contact";
+import Help from "@/pages/Help";
+import About from "@/pages/About";
+import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
 
@@ -14,11 +27,29 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <AuthProvider>
+          <WalletProvider>
+            <div className="flex flex-col min-h-screen">
+              <Navbar />
+              <main className="flex-1">
+                <Routes>
+                  <Route path="/" element={<Events />} />
+                  <Route path="/event/:id" element={<EventDetails />} />
+                  <Route path="/my-tickets" element={<MyTickets />} />
+                  <Route path="/admin" element={<AdminDashboard />} />
+                  <Route path="/verify" element={<VerifyTicket />} />
+                  <Route path="/auth" element={<Auth />} />
+                  <Route path="/contact" element={<Contact />} />
+                  <Route path="/help" element={<Help />} />
+                  <Route path="/about" element={<About />} />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </main>
+              <Footer />
+              <ChatbotButton />
+            </div>
+          </WalletProvider>
+        </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
