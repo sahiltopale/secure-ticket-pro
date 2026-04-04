@@ -14,6 +14,7 @@ import EventDetails from "@/pages/EventDetails";
 import MyTickets from "@/pages/MyTickets";
 import AdminDashboard from "@/pages/AdminDashboard";
 import VerifyTicket from "@/pages/VerifyTicket";
+import VerifyTicketPage from "@/pages/VerifyTicketPage";
 import Auth from "@/pages/Auth";
 import Contact from "@/pages/Contact";
 import Help from "@/pages/Help";
@@ -40,6 +41,7 @@ const App = () => (
                     <Route path="/my-tickets" element={<MyTickets />} />
                     <Route path="/admin" element={<AdminDashboard />} />
                     <Route path="/verify" element={<VerifyTicket />} />
+                    <Route path="/verify/:ticketId" element={<VerifyTicketPage />} />
                     <Route path="/auth" element={<Auth />} />
                     <Route path="/contact" element={<Contact />} />
                     <Route path="/help" element={<Help />} />

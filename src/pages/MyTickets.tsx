@@ -63,7 +63,7 @@ export default function MyTickets() {
                   <div className="flex items-center justify-center p-6 bg-card border-b sm:border-b-0 sm:border-r">
                     <div className="bg-white p-3 rounded-lg">
                       <QRCodeSVG
-                        value={ticket.qr_code_data || JSON.stringify({ ticketId: ticket.ticket_id, eventId: ticket.event_id })}
+                        value={`${window.location.origin}/verify/${ticket.ticket_id}`}
                         size={120}
                         level="H"
                       />
