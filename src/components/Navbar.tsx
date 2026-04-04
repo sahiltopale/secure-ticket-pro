@@ -115,6 +115,10 @@ export default function Navbar() {
                 </Link>
               )}
               <div className="flex flex-col gap-2 pt-2 border-t mt-2">
+                <div className="flex items-center justify-between px-3 py-1">
+                  <span className="text-sm text-muted-foreground">Theme</span>
+                  <ThemeToggle />
+                </div>
                 <Button variant="outline" size="sm" onClick={connectWallet} disabled={isConnecting} className="gap-2 justify-start">
                   <Wallet className="h-4 w-4" />
                   {shortAddress || 'Connect Wallet'}
