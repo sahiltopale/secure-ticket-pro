@@ -41,6 +41,7 @@ const App = () => (
                     <Route path="/my-tickets" element={<MyTickets />} />
                     <Route path="/admin" element={<AdminDashboard />} />
                     <Route path="/verify" element={<VerifyTicket />} />
+                    <Route path="/verify/:ticketId" element={<VerifyTicketPage />} />
                     <Route path="/auth" element={<Auth />} />
                     <Route path="/contact" element={<Contact />} />
                     <Route path="/help" element={<Help />} />
