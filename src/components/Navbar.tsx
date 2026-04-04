@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X, Wallet, LogOut, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import ThemeToggle from '@/components/ThemeToggle';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWallet } from '@/contexts/WalletContext';
 
@@ -61,6 +62,7 @@ export default function Navbar() {
           </div>
 
           <div className="hidden md:flex items-center gap-2">
+            <ThemeToggle />
             <Button
               variant="outline"
               size="sm"
@@ -113,6 +115,10 @@ export default function Navbar() {
                 </Link>
               )}
               <div className="flex flex-col gap-2 pt-2 border-t mt-2">
+                <div className="flex items-center justify-between px-3 py-1">
+                  <span className="text-sm text-muted-foreground">Theme</span>
+                  <ThemeToggle />
+                </div>
                 <Button variant="outline" size="sm" onClick={connectWallet} disabled={isConnecting} className="gap-2 justify-start">
                   <Wallet className="h-4 w-4" />
                   {shortAddress || 'Connect Wallet'}
