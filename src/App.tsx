@@ -14,6 +14,7 @@ import EventDetails from "@/pages/EventDetails";
 import MyTickets from "@/pages/MyTickets";
 import AdminDashboard from "@/pages/AdminDashboard";
 import VerifyTicket from "@/pages/VerifyTicket";
+import VerifyTicketPage from "@/pages/VerifyTicketPage";
 import Auth from "@/pages/Auth";
 import Contact from "@/pages/Contact";
 import Help from "@/pages/Help";
