@@ -1,15 +1,29 @@
 import { useState, useEffect, useRef } from 'react';
-import { Camera, CheckCircle, XCircle, RotateCcw } from 'lucide-react';
+import { Camera, CheckCircle, XCircle, RotateCcw, Calendar, Tag, CreditCard, Clock, Wallet, Hash } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 
-type ScanResult = { status: 'idle' | 'valid' | 'invalid' | 'used'; message: string };
+type TicketDetails = {
+  ticketId: string;
+  eventTitle: string;
+  eventDate: string | null;
+  eventCategory: string | null;
+  price: number;
+  bookingDate: string;
+  walletAddress?: string | null;
+};
+
+type ScanResult = {
+  status: 'idle' | 'valid' | 'invalid' | 'used';
+  message: string;
+  ticket?: TicketDetails;
+};
 
 export default function VerifyTicket() {
   const [scanning, setScanning] = useState(false);
   const [result, setResult] = useState<ScanResult>({ status: 'idle', message: '' });
-  const scannerRef = useRef<HTMLDivElement>(null);
+  const [loading, setLoading] = useState(false);
   const html5QrCodeRef = useRef<any>(null);
 
   const startScanner = async () => {
@@ -46,37 +60,46 @@ export default function VerifyTicket() {
   };
 
   const verifyTicket = async (qrData: string) => {
+    setLoading(true);
     try {
       let parsed: any;
       try { parsed = JSON.parse(qrData); } catch { parsed = { ticketId: qrData }; }
 
-      const { data: ticket, error } = await supabase
-        .from('tickets')
-        .select('*')
-        .eq('ticket_id', parsed.ticketId || '')
-        .single();
+      const ticketId = parsed.ticketId || qrData;
 
-      if (error || !ticket) {
-        setResult({ status: 'invalid', message: 'Ticket not found. This QR code is invalid.' });
+      const { data, error } = await supabase.functions.invoke('verify-ticket', {
+        body: { ticketId },
+      });
+
+      if (error) {
+        setResult({ status: 'invalid', message: 'Verification failed. Please try again.' });
         return;
       }
 
-      if (ticket.is_used) {
-        setResult({ status: 'used', message: 'This ticket has already been used.' });
-        return;
+      if (data.valid) {
+        setResult({ status: 'valid', message: data.message, ticket: data.ticket });
+      } else if (data.alreadyUsed) {
+        setResult({ status: 'used', message: data.message, ticket: data.ticket });
+      } else {
+        setResult({ status: 'invalid', message: data.message });
       }
-
-      // Mark as used
-      await supabase.from('tickets').update({ is_used: true }).eq('id', ticket.id);
-      setResult({ status: 'valid', message: `Ticket verified! Event: ${parsed.eventId || 'N/A'}` });
     } catch (err: any) {
       setResult({ status: 'invalid', message: 'Verification failed: ' + err.message });
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
     return () => { stopScanner(); };
   }, []);
+
+  const formatDate = (dateStr: string | null) => {
+    if (!dateStr) return 'N/A';
+    return new Date(dateStr).toLocaleDateString('en-US', {
+      weekday: 'short', year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+    });
+  };
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-lg">
@@ -89,9 +112,9 @@ export default function VerifyTicket() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div id="qr-reader" ref={scannerRef} className="w-full rounded-lg overflow-hidden" />
+          <div id="qr-reader" className="w-full rounded-lg overflow-hidden" />
 
-          {!scanning && result.status === 'idle' && (
+          {!scanning && result.status === 'idle' && !loading && (
             <Button onClick={startScanner} className="w-full gap-2">
               <Camera className="h-4 w-4" /> Start Scanning
             </Button>
@@ -103,29 +126,95 @@ export default function VerifyTicket() {
             </Button>
           )}
 
-          {result.status !== 'idle' && (
-            <div className={`p-4 rounded-lg flex items-center gap-3 ${
-              result.status === 'valid' ? 'bg-secondary/10 text-secondary' :
-              result.status === 'used' ? 'bg-yellow-500/10 text-yellow-600' :
-              'bg-destructive/10 text-destructive'
-            }`}>
-              {result.status === 'valid' ? <CheckCircle className="h-6 w-6" /> : <XCircle className="h-6 w-6" />}
-              <div>
-                <p className="font-semibold">
-                  {result.status === 'valid' ? '✅ Valid Ticket' : result.status === 'used' ? '⚠️ Already Used' : '❌ Invalid Ticket'}
-                </p>
-                <p className="text-sm">{result.message}</p>
+          {loading && (
+            <div className="flex items-center justify-center py-6">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+              <span className="ml-3 text-muted-foreground">Verifying ticket...</span>
+            </div>
+          )}
+
+          {/* VALID TICKET */}
+          {result.status === 'valid' && result.ticket && (
+            <div className="rounded-xl border-2 border-green-500 bg-green-500/10 overflow-hidden animate-fade-in">
+              <div className="bg-green-500 px-4 py-3 flex items-center gap-3">
+                <CheckCircle className="h-6 w-6 text-white" />
+                <div>
+                  <p className="font-bold text-white text-lg">✅ Valid Ticket</p>
+                  <p className="text-green-100 text-sm">{result.message}</p>
+                </div>
+              </div>
+              <div className="p-4 space-y-3">
+                <h3 className="font-semibold text-lg">{result.ticket.eventTitle}</h3>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <DetailRow icon={<Calendar className="h-4 w-4" />} label="Event Date" value={formatDate(result.ticket.eventDate)} />
+                  <DetailRow icon={<Tag className="h-4 w-4" />} label="Category" value={result.ticket.eventCategory || 'General'} />
+                  <DetailRow icon={<CreditCard className="h-4 w-4" />} label="Price" value={`₹${result.ticket.price}`} />
+                  <DetailRow icon={<Clock className="h-4 w-4" />} label="Booked On" value={formatDate(result.ticket.bookingDate)} />
+                  <DetailRow icon={<Hash className="h-4 w-4" />} label="Ticket ID" value={result.ticket.ticketId.slice(0, 8) + '...'} />
+                  {result.ticket.walletAddress && (
+                    <DetailRow icon={<Wallet className="h-4 w-4" />} label="Wallet" value={result.ticket.walletAddress.slice(0, 6) + '...' + result.ticket.walletAddress.slice(-4)} />
+                  )}
+                </div>
               </div>
             </div>
           )}
 
-          {result.status !== 'idle' && (
-            <Button variant="outline" onClick={() => { setResult({ status: 'idle', message: '' }); }} className="w-full gap-2">
+          {/* ALREADY USED */}
+          {result.status === 'used' && (
+            <div className="rounded-xl border-2 border-yellow-500 bg-yellow-500/10 overflow-hidden animate-fade-in">
+              <div className="bg-yellow-500 px-4 py-3 flex items-center gap-3">
+                <XCircle className="h-6 w-6 text-white" />
+                <div>
+                  <p className="font-bold text-white text-lg">⚠️ Already Used</p>
+                  <p className="text-yellow-100 text-sm">{result.message}</p>
+                </div>
+              </div>
+              {result.ticket && (
+                <div className="p-4 space-y-3">
+                  <h3 className="font-semibold text-lg">{result.ticket.eventTitle}</h3>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <DetailRow icon={<Calendar className="h-4 w-4" />} label="Event Date" value={formatDate(result.ticket.eventDate)} />
+                    <DetailRow icon={<Tag className="h-4 w-4" />} label="Category" value={result.ticket.eventCategory || 'General'} />
+                    <DetailRow icon={<CreditCard className="h-4 w-4" />} label="Price" value={`₹${result.ticket.price}`} />
+                    <DetailRow icon={<Hash className="h-4 w-4" />} label="Ticket ID" value={result.ticket.ticketId.slice(0, 8) + '...'} />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* INVALID */}
+          {result.status === 'invalid' && (
+            <div className="rounded-xl border-2 border-destructive bg-destructive/10 overflow-hidden animate-fade-in">
+              <div className="bg-destructive px-4 py-3 flex items-center gap-3">
+                <XCircle className="h-6 w-6 text-white" />
+                <div>
+                  <p className="font-bold text-white text-lg">❌ Invalid Ticket</p>
+                  <p className="text-red-100 text-sm">{result.message}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {result.status !== 'idle' && !loading && (
+            <Button variant="outline" onClick={() => setResult({ status: 'idle', message: '' })} className="w-full gap-2">
               <RotateCcw className="h-4 w-4" /> Scan Another
             </Button>
           )}
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+function DetailRow({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+  return (
+    <div className="flex items-start gap-2">
+      <span className="text-muted-foreground mt-0.5">{icon}</span>
+      <div>
+        <p className="text-muted-foreground text-xs">{label}</p>
+        <p className="font-medium">{value}</p>
+      </div>
     </div>
   );
 }
