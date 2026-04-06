@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, Wallet, LogOut, Shield } from 'lucide-react';
+import { Menu, X, Wallet, LogOut, Shield, Unplug, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import ThemeToggle from '@/components/ThemeToggle';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWallet } from '@/contexts/WalletContext';
@@ -14,15 +15,77 @@ const navLinks = [
   { to: '/about', label: 'About Us' },
 ];
 
-export default function Navbar() {
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const { user, isAdmin, signOut } = useAuth();
-  const { walletAddress, isConnecting, connectWallet } = useWallet();
-  const location = useLocation();
+function WalletButton() {
+  const { walletAddress, isConnecting, chainName, connectWallet, disconnectWallet } = useWallet();
 
   const shortAddress = walletAddress
     ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
     : null;
+
+  if (walletAddress) {
+    return (
+      <Popover>
+        <PopoverTrigger asChild>
+          <button className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-primary/30 bg-primary/5 text-sm font-medium transition-all hover:bg-primary/10 hover:border-primary/50 cursor-pointer">
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500" />
+            </span>
+            <Wallet className="h-3.5 w-3.5 text-primary" />
+            <span className="font-mono text-xs">{shortAddress}</span>
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className="w-64 p-3" align="end">
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500" />
+              </span>
+              <span className="text-sm font-medium">Wallet Connected</span>
+            </div>
+            <div className="rounded-md bg-muted p-2">
+              <p className="font-mono text-xs break-all text-foreground">{walletAddress}</p>
+            </div>
+            {chainName && (
+              <p className="text-xs text-muted-foreground">Network: {chainName}</p>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={disconnectWallet}
+              className="w-full gap-2 text-destructive hover:text-destructive"
+            >
+              <Unplug className="h-3.5 w-3.5" />
+              Disconnect
+            </Button>
+          </div>
+        </PopoverContent>
+      </Popover>
+    );
+  }
+
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={connectWallet}
+      disabled={isConnecting}
+      className="gap-2 rounded-full"
+    >
+      {isConnecting ? (
+        <Loader2 className="h-4 w-4 animate-spin" />
+      ) : (
+        <Wallet className="h-4 w-4" />
+      )}
+      {isConnecting ? 'Connecting...' : 'Connect Wallet'}
+    </Button>
+  );
+}
+
+export default function Navbar() {
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const { user, isAdmin, signOut } = useAuth();
+  const location = useLocation();
 
   return (
     <nav className="sticky top-0 z-50 glass-card border-b">
@@ -63,16 +126,7 @@ export default function Navbar() {
 
           <div className="hidden md:flex items-center gap-2">
             <ThemeToggle />
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={connectWallet}
-              disabled={isConnecting}
-              className="gap-2"
-            >
-              <Wallet className="h-4 w-4" />
-              {shortAddress || (isConnecting ? 'Connecting...' : 'Connect Wallet')}
-            </Button>
+            <WalletButton />
             {user ? (
               <Button variant="ghost" size="sm" onClick={signOut} className="gap-2">
                 <LogOut className="h-4 w-4" /> Sign Out
@@ -119,10 +173,9 @@ export default function Navbar() {
                   <span className="text-sm text-muted-foreground">Theme</span>
                   <ThemeToggle />
                 </div>
-                <Button variant="outline" size="sm" onClick={connectWallet} disabled={isConnecting} className="gap-2 justify-start">
-                  <Wallet className="h-4 w-4" />
-                  {shortAddress || 'Connect Wallet'}
-                </Button>
+                <div className="px-3">
+                  <WalletButton />
+                </div>
                 {user ? (
                   <Button variant="ghost" size="sm" onClick={() => { signOut(); setMobileOpen(false); }} className="gap-2 justify-start">
                     <LogOut className="h-4 w-4" /> Sign Out
