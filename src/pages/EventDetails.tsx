@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWallet } from '@/contexts/WalletContext';
 import { toast } from '@/hooks/use-toast';
+import SeatLayout from '@/components/SeatLayout';
 import type { Tables } from '@/integrations/supabase/types';
 
 export default function EventDetails() {
@@ -20,6 +21,7 @@ export default function EventDetails() {
   const [loading, setLoading] = useState(true);
   const [bookingOpen, setBookingOpen] = useState(false);
   const [booking, setBooking] = useState(false);
+  const [selectedSeat, setSelectedSeat] = useState<string | null>(null);
 
   useEffect(() => {
     const fetch = async () => {
@@ -32,6 +34,10 @@ export default function EventDetails() {
 
   const handleBook = async () => {
     if (!user) { navigate('/auth'); return; }
+    if (!selectedSeat) {
+      toast({ title: 'Select a Seat', description: 'Please choose a seat before booking.', variant: 'destructive' });
+      return;
+    }
     setBooking(true);
     try {
       const { data, error } = await supabase.rpc('book_ticket', {
@@ -40,9 +46,15 @@ export default function EventDetails() {
         p_wallet_address: walletAddress || undefined,
       });
       if (error) throw error;
-      toast({ title: 'Ticket Booked! 🎉', description: 'Check My Tickets for your QR code.' });
+
+      // Update seat number on the created ticket
+      if (data) {
+        await supabase.from('tickets').update({ seat_number: selectedSeat } as any).eq('id', data);
+      }
+
+      toast({ title: 'Ticket Booked! 🎉', description: `Seat ${selectedSeat} confirmed. Check My Tickets for your QR code.` });
       setBookingOpen(false);
-      // Refresh event data
+      setSelectedSeat(null);
       const { data: updated } = await supabase.from('events').select('*').eq('id', id!).single();
       setEvent(updated);
     } catch (err: any) {
@@ -56,7 +68,7 @@ export default function EventDetails() {
   if (!event) return <div className="container mx-auto px-4 py-16 text-center">Event not found</div>;
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl animate-fade-in">
+    <div className="container mx-auto px-4 py-8 max-w-5xl animate-fade-in">
       <Button variant="ghost" onClick={() => navigate(-1)} className="mb-4 gap-2">
         <ArrowLeft className="h-4 w-4" /> Back
       </Button>
@@ -120,6 +132,27 @@ export default function EventDetails() {
         </div>
       </div>
 
+      {/* Seat Selection Section */}
+      <div className="mt-10">
+        <h2 className="font-display text-2xl font-bold mb-4">Select Your Seat</h2>
+        <Card>
+          <CardContent className="p-6">
+            <SeatLayout
+              category={event.category}
+              totalSeats={event.total_seats}
+              availableSeats={event.available_seats}
+              onSelect={setSelectedSeat}
+              selectedSeat={selectedSeat}
+            />
+          </CardContent>
+        </Card>
+        {selectedSeat && (
+          <div className="mt-4 text-center animate-fade-in">
+            <Badge className="text-sm px-4 py-2">Selected: Seat {selectedSeat}</Badge>
+          </div>
+        )}
+      </div>
+
       {/* Booking Modal */}
       <Dialog open={bookingOpen} onOpenChange={setBookingOpen}>
         <DialogContent>
@@ -131,6 +164,7 @@ export default function EventDetails() {
             <p className="text-sm"><strong>Event:</strong> {event.title}</p>
             <p className="text-sm"><strong>Date:</strong> {new Date(event.date).toLocaleDateString()}</p>
             <p className="text-sm"><strong>Price:</strong> ${Number(event.price).toFixed(2)}</p>
+            {selectedSeat && <p className="text-sm"><strong>Seat:</strong> {selectedSeat}</p>}
             {walletAddress && <p className="text-sm"><strong>Wallet:</strong> {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}</p>}
           </div>
           <DialogFooter>
