@@ -2,9 +2,18 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+async function hmacVerify(key: string, message: string, signature: string): Promise<boolean> {
+  const encoder = new TextEncoder();
+  const keyData = await crypto.subtle.importKey(
+    "raw", encoder.encode(key), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
+  );
+  const sig = await crypto.subtle.sign("HMAC", keyData, encoder.encode(message));
+  const expected = Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, '0')).join('');
+  return expected === signature;
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -12,7 +21,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { ticketId, action } = await req.json();
+    const { ticketId, action, token, t } = await req.json();
 
     if (!ticketId) {
       return new Response(
@@ -24,6 +33,27 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceKey);
+
+    // Validate token if provided (secure QR flow)
+    if (token && t) {
+      const timestamp = parseInt(t);
+      const currentWindow = Math.floor(Math.floor(Date.now() / 1000) / 30);
+      const tokenWindow = Math.floor(timestamp / 30);
+      // Allow current window and previous window (60s grace)
+      let valid = false;
+      for (let w = currentWindow - 1; w <= currentWindow; w++) {
+        if (await hmacVerify(serviceKey, `${ticketId}:${w}`, token)) {
+          valid = true;
+          break;
+        }
+      }
+      if (!valid) {
+        return new Response(
+          JSON.stringify({ valid: false, message: "QR code expired or invalid. Please use a live QR code from the ticket holder's device." }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
 
     const { data: ticket, error } = await supabase
       .from("tickets")
@@ -47,9 +77,9 @@ Deno.serve(async (req) => {
       bookingDate: ticket.booking_date,
       walletAddress: ticket.wallet_address,
       imageUrl: ticket.events?.image_url ?? null,
+      seatNumber: ticket.seat_number ?? null,
     };
 
-    // LOOKUP: just check status, don't mark as used
     if (action === "lookup") {
       if (ticket.is_used) {
         return new Response(
@@ -63,7 +93,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // PERMIT: mark as used
     if (action === "permit") {
       if (ticket.is_used) {
         return new Response(
@@ -78,7 +107,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // DENY: also mark as used/invalid
     if (action === "deny") {
       await supabase.from("tickets").update({ is_used: true }).eq("id", ticket.id);
       return new Response(
@@ -87,14 +115,13 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Default legacy behavior: verify and mark
+    // Default legacy
     if (ticket.is_used) {
       return new Response(
         JSON.stringify({ valid: false, alreadyUsed: true, message: "This ticket has already been used.", ticket: ticketInfo }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-
     await supabase.from("tickets").update({ is_used: true }).eq("id", ticket.id);
     return new Response(
       JSON.stringify({ valid: true, message: "Ticket verified successfully!", ticket: ticketInfo }),
