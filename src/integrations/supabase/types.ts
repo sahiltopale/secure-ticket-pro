@@ -98,6 +98,7 @@ export type Database = {
           is_used: boolean
           nft_token_id: string | null
           qr_code_data: string | null
+          seat_number: string | null
           ticket_id: string
           user_id: string
           wallet_address: string | null
@@ -110,6 +111,7 @@ export type Database = {
           is_used?: boolean
           nft_token_id?: string | null
           qr_code_data?: string | null
+          seat_number?: string | null
           ticket_id?: string
           user_id: string
           wallet_address?: string | null
@@ -122,6 +124,7 @@ export type Database = {
           is_used?: boolean
           nft_token_id?: string | null
           qr_code_data?: string | null
+          seat_number?: string | null
           ticket_id?: string
           user_id?: string
           wallet_address?: string | null
