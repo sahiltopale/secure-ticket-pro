@@ -25,6 +25,7 @@ type VerifyState =
   | { status: 'denied'; ticket: TicketInfo };
 
 export default function VerifyTicketPage() {
+  const [searchParams] = useSearchParams();
   const { ticketId } = useParams<{ ticketId: string }>();
   const [state, setState] = useState<VerifyState>({ status: 'loading' });
   const [acting, setActing] = useState(false);
@@ -39,9 +40,11 @@ export default function VerifyTicketPage() {
 
   const lookupTicket = async (id: string) => {
     setState({ status: 'loading' });
+    const token = searchParams.get('token');
+    const t = searchParams.get('t');
     try {
       const { data, error } = await supabase.functions.invoke('verify-ticket', {
-        body: { ticketId: id, action: 'lookup' },
+        body: { ticketId: id, action: 'lookup', token, t },
       });
       if (error || !data) {
         setState({ status: 'invalid', message: 'Could not verify ticket.' });
