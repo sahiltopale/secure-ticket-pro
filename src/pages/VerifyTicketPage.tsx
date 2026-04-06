@@ -215,6 +215,9 @@ function TicketDetails({ ticket, fmt }: { ticket: TicketInfo; fmt: (d: string | 
         <DetailRow icon={<CreditCard className="h-4 w-4" />} label="Price" value={`₹${ticket.price}`} />
         <DetailRow icon={<Clock className="h-4 w-4" />} label="Booked On" value={fmt(ticket.bookingDate)} />
         <DetailRow icon={<Hash className="h-4 w-4" />} label="Ticket ID" value={ticket.ticketId.slice(0, 8) + '...'} />
+        {ticket.seatNumber && (
+          <DetailRow icon={<Hash className="h-4 w-4" />} label="Seat" value={ticket.seatNumber} />
+        )}
         {ticket.walletAddress && (
           <DetailRow icon={<Wallet className="h-4 w-4" />} label="Wallet" value={ticket.walletAddress.slice(0, 6) + '...' + ticket.walletAddress.slice(-4)} />
         )}
