@@ -14,6 +14,7 @@ type TicketInfo = {
   bookingDate: string;
   walletAddress?: string | null;
   imageUrl?: string | null;
+  seatNumber?: string | null;
 };
 
 type VerifyState =
