@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { CheckCircle, XCircle, Calendar, Tag, CreditCard, Clock, Hash, Wallet, ShieldCheck, ShieldX, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -14,6 +14,7 @@ type TicketInfo = {
   bookingDate: string;
   walletAddress?: string | null;
   imageUrl?: string | null;
+  seatNumber?: string | null;
 };
 
 type VerifyState =
@@ -25,6 +26,7 @@ type VerifyState =
   | { status: 'denied'; ticket: TicketInfo };
 
 export default function VerifyTicketPage() {
+  const [searchParams] = useSearchParams();
   const { ticketId } = useParams<{ ticketId: string }>();
   const [state, setState] = useState<VerifyState>({ status: 'loading' });
   const [acting, setActing] = useState(false);
@@ -39,9 +41,11 @@ export default function VerifyTicketPage() {
 
   const lookupTicket = async (id: string) => {
     setState({ status: 'loading' });
+    const token = searchParams.get('token');
+    const t = searchParams.get('t');
     try {
       const { data, error } = await supabase.functions.invoke('verify-ticket', {
-        body: { ticketId: id, action: 'lookup' },
+        body: { ticketId: id, action: 'lookup', token, t },
       });
       if (error || !data) {
         setState({ status: 'invalid', message: 'Could not verify ticket.' });
@@ -211,6 +215,9 @@ function TicketDetails({ ticket, fmt }: { ticket: TicketInfo; fmt: (d: string | 
         <DetailRow icon={<CreditCard className="h-4 w-4" />} label="Price" value={`₹${ticket.price}`} />
         <DetailRow icon={<Clock className="h-4 w-4" />} label="Booked On" value={fmt(ticket.bookingDate)} />
         <DetailRow icon={<Hash className="h-4 w-4" />} label="Ticket ID" value={ticket.ticketId.slice(0, 8) + '...'} />
+        {ticket.seatNumber && (
+          <DetailRow icon={<Hash className="h-4 w-4" />} label="Seat" value={ticket.seatNumber} />
+        )}
         {ticket.walletAddress && (
           <DetailRow icon={<Wallet className="h-4 w-4" />} label="Wallet" value={ticket.walletAddress.slice(0, 6) + '...' + ticket.walletAddress.slice(-4)} />
         )}
