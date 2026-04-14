@@ -78,6 +78,7 @@ Deno.serve(async (req) => {
       walletAddress: ticket.wallet_address,
       imageUrl: ticket.events?.image_url ?? null,
       seatNumber: ticket.seat_number ?? null,
+      nftTokenId: ticket.nft_token_id ?? null,
     };
 
     if (action === "lookup") {
