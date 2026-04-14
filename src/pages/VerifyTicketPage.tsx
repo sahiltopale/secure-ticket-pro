@@ -15,6 +15,7 @@ type TicketInfo = {
   walletAddress?: string | null;
   imageUrl?: string | null;
   seatNumber?: string | null;
+  nftTokenId?: string | null;
 };
 
 type VerifyState =
@@ -220,6 +221,9 @@ function TicketDetails({ ticket, fmt }: { ticket: TicketInfo; fmt: (d: string | 
         )}
         {ticket.walletAddress && (
           <DetailRow icon={<Wallet className="h-4 w-4" />} label="Wallet" value={ticket.walletAddress.slice(0, 6) + '...' + ticket.walletAddress.slice(-4)} />
+        )}
+        {ticket.nftTokenId && (
+          <DetailRow icon={<Hash className="h-4 w-4" />} label="On-Chain NFT" value={`Token #${ticket.nftTokenId}`} />
         )}
       </div>
     </div>
