@@ -180,6 +180,7 @@ export default function EventDetails() {
               availableSeats={event.available_seats}
               onSelect={setSelectedSeat}
               selectedSeat={selectedSeat}
+              bookedSeats={bookedSeats}
             />
           </CardContent>
         </Card>
