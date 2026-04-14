@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Calendar, DollarSign, MapPin, Users, ArrowLeft } from 'lucide-react';
+import { Calendar, DollarSign, MapPin, Users, ArrowLeft, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWallet } from '@/contexts/WalletContext';
 import { toast } from '@/hooks/use-toast';
+import { buyTicketOnChain } from '@/services/blockchainService';
 import SeatLayout from '@/components/SeatLayout';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -16,12 +17,13 @@ export default function EventDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { walletAddress } = useWallet();
+  const { walletAddress, connectWallet } = useWallet();
   const [event, setEvent] = useState<Tables<'events'> | null>(null);
   const [loading, setLoading] = useState(true);
   const [bookingOpen, setBookingOpen] = useState(false);
   const [booking, setBooking] = useState(false);
   const [selectedSeat, setSelectedSeat] = useState<string | null>(null);
+  const [bookingStep, setBookingStep] = useState<'confirm' | 'blockchain' | 'done'>('confirm');
 
   useEffect(() => {
     const fetch = async () => {
@@ -39,7 +41,10 @@ export default function EventDetails() {
       return;
     }
     setBooking(true);
+    setBookingStep('confirm');
+
     try {
+      // Step 1: Book in database
       const { data, error } = await supabase.rpc('book_ticket', {
         p_event_id: id!,
         p_user_id: user.id,
@@ -47,12 +52,34 @@ export default function EventDetails() {
       });
       if (error) throw error;
 
-      // Update seat number on the created ticket
+      // Update seat number
       if (data) {
         await supabase.from('tickets').update({ seat_number: selectedSeat } as any).eq('id', data);
       }
 
-      toast({ title: 'Ticket Booked! 🎉', description: `Seat ${selectedSeat} confirmed. Check My Tickets for your QR code.` });
+      // Step 2: If wallet connected, mint on blockchain
+      let nftTokenId: number | null = null;
+      if (walletAddress && event) {
+        setBookingStep('blockchain');
+        try {
+          nftTokenId = await buyTicketOnChain(event.title);
+          // Save NFT token ID to ticket
+          if (data && nftTokenId) {
+            await supabase.from('tickets').update({ nft_token_id: String(nftTokenId) }).eq('id', data);
+          }
+          toast({ title: 'On-Chain Ticket Minted! ⛓️', description: `NFT Token #${nftTokenId} created on Sepolia.` });
+        } catch (chainErr: any) {
+          console.error('Blockchain mint failed:', chainErr);
+          toast({
+            title: 'Blockchain Mint Skipped',
+            description: chainErr?.reason || chainErr?.message || 'Transaction was rejected or failed. Ticket is still booked in database.',
+            variant: 'destructive',
+          });
+        }
+      }
+
+      setBookingStep('done');
+      toast({ title: 'Ticket Booked! 🎉', description: `Seat ${selectedSeat} confirmed.${nftTokenId ? ` NFT #${nftTokenId}` : ''} Check My Tickets for your QR code.` });
       setBookingOpen(false);
       setSelectedSeat(null);
       const { data: updated } = await supabase.from('events').select('*').eq('id', id!).single();
@@ -61,6 +88,7 @@ export default function EventDetails() {
       toast({ title: 'Booking Failed', description: err.message, variant: 'destructive' });
     } finally {
       setBooking(false);
+      setBookingStep('confirm');
     }
   };
 
@@ -121,6 +149,12 @@ export default function EventDetails() {
             </CardContent>
           </Card>
 
+          {!walletAddress && (
+            <Button variant="outline" className="w-full mb-3 gap-2" onClick={connectWallet}>
+              🦊 Connect Wallet for On-Chain Ticket
+            </Button>
+          )}
+
           <Button
             size="lg"
             className="w-full"
@@ -165,12 +199,31 @@ export default function EventDetails() {
             <p className="text-sm"><strong>Date:</strong> {new Date(event.date).toLocaleDateString()}</p>
             <p className="text-sm"><strong>Price:</strong> ${Number(event.price).toFixed(2)}</p>
             {selectedSeat && <p className="text-sm"><strong>Seat:</strong> {selectedSeat}</p>}
-            {walletAddress && <p className="text-sm"><strong>Wallet:</strong> {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}</p>}
+            {walletAddress && (
+              <>
+                <p className="text-sm"><strong>Wallet:</strong> {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}</p>
+                <p className="text-xs text-primary">⛓️ This ticket will also be minted on-chain (Sepolia)</p>
+              </>
+            )}
+            {!walletAddress && (
+              <p className="text-xs text-muted-foreground">💡 Connect your wallet to also mint an on-chain NFT ticket</p>
+            )}
           </div>
+          {booking && bookingStep === 'blockchain' && (
+            <div className="flex items-center gap-2 text-sm text-primary animate-pulse">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Minting on-chain... Confirm in MetaMask
+            </div>
+          )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setBookingOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setBookingOpen(false)} disabled={booking}>Cancel</Button>
             <Button onClick={handleBook} disabled={booking}>
-              {booking ? 'Booking...' : 'Confirm Booking'}
+              {booking ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  {bookingStep === 'blockchain' ? 'Minting...' : 'Booking...'}
+                </span>
+              ) : 'Confirm Booking'}
             </Button>
           </DialogFooter>
         </DialogContent>
