@@ -86,8 +86,7 @@ export default function EventDetails() {
       toast({ title: 'Ticket Booked! 🎉', description: `Seat ${selectedSeat} confirmed.${nftTokenId ? ` NFT #${nftTokenId}` : ''} Check My Tickets for your QR code.` });
       setBookingOpen(false);
       setSelectedSeat(null);
-      const { data: updated } = await supabase.from('events').select('*').eq('id', id!).single();
-      setEvent(updated);
+      await fetchEventAndSeats();
     } catch (err: any) {
       toast({ title: 'Booking Failed', description: err.message, variant: 'destructive' });
     } finally {
