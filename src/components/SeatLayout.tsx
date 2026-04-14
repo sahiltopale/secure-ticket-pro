@@ -34,11 +34,9 @@ function generateSeats(category: string | null, total: number) {
   return { seats, cols };
 }
 
-export default function SeatLayout({ category, totalSeats, availableSeats, onSelect, selectedSeat }: SeatLayoutProps) {
+export default function SeatLayout({ category, totalSeats, availableSeats, onSelect, selectedSeat, bookedSeats: bookedSeatsList = [] }: SeatLayoutProps) {
   const { seats, cols } = generateSeats(category, totalSeats);
-  const bookedCount = totalSeats - availableSeats;
-  // Simulate booked seats (first N seats are booked)
-  const bookedSeats = new Set(seats.slice(0, bookedCount).map(s => s.id));
+  const bookedSeats = new Set(bookedSeatsList);
 
   return (
     <div className="space-y-4">
