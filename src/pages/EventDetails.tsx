@@ -48,7 +48,31 @@ export default function EventDetails() {
     setBookingStep('confirm');
 
     try {
-      // Step 1: Book in database
+      // Step 1: If wallet connected, mint on-chain FIRST
+      let nftTokenId: number | null = null;
+      if (walletAddress && event) {
+        setBookingStep('blockchain');
+        try {
+          nftTokenId = await buyTicketOnChain(event.title);
+        } catch (chainErr: any) {
+          console.error('Blockchain mint failed:', chainErr);
+          const msg = chainErr?.message || chainErr?.reason || '';
+          const isInsufficientFunds = msg.toLowerCase().includes('insufficient') || msg.includes('funds');
+          toast({
+            title: isInsufficientFunds ? 'Insufficient Gas Fees or Funds' : 'Blockchain Transaction Failed',
+            description: isInsufficientFunds
+              ? 'You do not have enough ETH in your wallet to pay for network fees. Please add funds and try again.'
+              : (chainErr?.reason || chainErr?.message || 'Transaction was rejected or failed.'),
+            variant: 'destructive',
+          });
+          setBooking(false);
+          setBookingStep('confirm');
+          return; // Do NOT book in database
+        }
+      }
+
+      // Step 2: Book in database (only reached if chain mint succeeded or no wallet)
+      setBookingStep('confirm');
       const { data, error } = await supabase.rpc('book_ticket', {
         p_event_id: id!,
         p_user_id: user.id,
@@ -61,25 +85,10 @@ export default function EventDetails() {
         await supabase.from('tickets').update({ seat_number: selectedSeat } as any).eq('id', data);
       }
 
-      // Step 2: If wallet connected, mint on blockchain
-      let nftTokenId: number | null = null;
-      if (walletAddress && event) {
-        setBookingStep('blockchain');
-        try {
-          nftTokenId = await buyTicketOnChain(event.title);
-          // Save NFT token ID to ticket
-          if (data && nftTokenId) {
-            await supabase.from('tickets').update({ nft_token_id: String(nftTokenId) }).eq('id', data);
-          }
-          toast({ title: 'On-Chain Ticket Minted! ⛓️', description: `NFT Token #${nftTokenId} created on Sepolia.` });
-        } catch (chainErr: any) {
-          console.error('Blockchain mint failed:', chainErr);
-          toast({
-            title: 'Blockchain Mint Skipped',
-            description: chainErr?.reason || chainErr?.message || 'Transaction was rejected or failed. Ticket is still booked in database.',
-            variant: 'destructive',
-          });
-        }
+      // Save NFT token ID if minted
+      if (data && nftTokenId) {
+        await supabase.from('tickets').update({ nft_token_id: String(nftTokenId) }).eq('id', data);
+        toast({ title: 'On-Chain Ticket Minted! ⛓️', description: `NFT Token #${nftTokenId} created on Sepolia.` });
       }
 
       setBookingStep('done');
