@@ -24,15 +24,19 @@ export default function EventDetails() {
   const [booking, setBooking] = useState(false);
   const [selectedSeat, setSelectedSeat] = useState<string | null>(null);
   const [bookingStep, setBookingStep] = useState<'confirm' | 'blockchain' | 'done'>('confirm');
+  const [bookedSeats, setBookedSeats] = useState<string[]>([]);
 
-  useEffect(() => {
-    const fetch = async () => {
-      const { data } = await supabase.from('events').select('*').eq('id', id!).single();
-      setEvent(data);
-      setLoading(false);
-    };
-    fetch();
-  }, [id]);
+  const fetchEventAndSeats = async () => {
+    const [{ data: eventData }, { data: seatsData }] = await Promise.all([
+      supabase.from('events').select('*').eq('id', id!).single(),
+      supabase.from('tickets').select('seat_number').eq('event_id', id!).not('seat_number', 'is', null),
+    ]);
+    setEvent(eventData);
+    setBookedSeats((seatsData || []).map((t: any) => t.seat_number));
+    setLoading(false);
+  };
+
+  useEffect(() => { fetchEventAndSeats(); }, [id]);
 
   const handleBook = async () => {
     if (!user) { navigate('/auth'); return; }
@@ -82,8 +86,7 @@ export default function EventDetails() {
       toast({ title: 'Ticket Booked! 🎉', description: `Seat ${selectedSeat} confirmed.${nftTokenId ? ` NFT #${nftTokenId}` : ''} Check My Tickets for your QR code.` });
       setBookingOpen(false);
       setSelectedSeat(null);
-      const { data: updated } = await supabase.from('events').select('*').eq('id', id!).single();
-      setEvent(updated);
+      await fetchEventAndSeats();
     } catch (err: any) {
       toast({ title: 'Booking Failed', description: err.message, variant: 'destructive' });
     } finally {
@@ -177,6 +180,7 @@ export default function EventDetails() {
               availableSeats={event.available_seats}
               onSelect={setSelectedSeat}
               selectedSeat={selectedSeat}
+              bookedSeats={bookedSeats}
             />
           </CardContent>
         </Card>

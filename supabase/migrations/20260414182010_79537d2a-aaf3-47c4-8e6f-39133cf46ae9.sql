@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX idx_unique_seat_per_event ON public.tickets (event_id, seat_number) WHERE seat_number IS NOT NULL;
