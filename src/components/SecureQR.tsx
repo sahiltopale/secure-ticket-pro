@@ -53,13 +53,21 @@ export default function SecureQR({ ticketId, size = 160 }: SecureQRProps) {
     return () => clearInterval(timer);
   }, []);
 
+  if (isUsed) {
+    return (
+      <div className="flex flex-col items-center justify-center p-4 text-center" style={{ width: size, height: size }}>
+        <Shield className="h-8 w-8 text-muted-foreground mb-2" />
+        <p className="text-sm font-medium text-muted-foreground">Ticket Already Used</p>
+      </div>
+    );
+  }
+
   return (
     <div
       className="relative select-none"
       onContextMenu={(e) => e.preventDefault()}
       style={{ WebkitUserSelect: 'none', userSelect: 'none' }}
     >
-      {/* Anti-screenshot overlay */}
       <div className="relative bg-white p-3 rounded-lg">
         {loading ? (
           <div className="flex items-center justify-center" style={{ width: size, height: size }}>
@@ -68,14 +76,12 @@ export default function SecureQR({ ticketId, size = 160 }: SecureQRProps) {
         ) : (
           <QRCodeSVG value={qrValue} size={size} level="H" />
         )}
-        {/* Watermark overlay to discourage screenshots */}
         <div className="absolute inset-0 pointer-events-none flex items-center justify-center opacity-[0.03]">
           <span className="text-black text-xs font-bold rotate-[-30deg] whitespace-nowrap">
             AUTHENTIX SECURE • DO NOT SHARE
           </span>
         </div>
       </div>
-      {/* Timer bar */}
       <div className="mt-2 flex items-center gap-2 justify-center text-xs text-muted-foreground">
         <Shield className="h-3 w-3 text-primary" />
         <span>Refreshes in {countdown}s</span>
