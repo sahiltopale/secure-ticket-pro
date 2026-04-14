@@ -12,13 +12,21 @@ export default function SecureQR({ ticketId, size = 160 }: SecureQRProps) {
   const [qrValue, setQrValue] = useState('');
   const [countdown, setCountdown] = useState(30);
   const [loading, setLoading] = useState(true);
+  const [isUsed, setIsUsed] = useState(false);
 
   const fetchToken = useCallback(async () => {
+    if (isUsed) return;
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('generate-qr-token', {
         body: { ticketId },
       });
+      if (data?.used) {
+        setIsUsed(true);
+        setQrValue('');
+        setLoading(false);
+        return;
+      }
       if (error || !data?.token) {
         setQrValue(`${window.location.origin}/verify/${ticketId}`);
       } else {
@@ -30,7 +38,7 @@ export default function SecureQR({ ticketId, size = 160 }: SecureQRProps) {
     } finally {
       setLoading(false);
     }
-  }, [ticketId]);
+  }, [ticketId, isUsed]);
 
   useEffect(() => {
     fetchToken();
