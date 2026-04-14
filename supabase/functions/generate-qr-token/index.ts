@@ -64,8 +64,8 @@ Deno.serve(async (req) => {
     }
 
     if (ticket.is_used) {
-      return new Response(JSON.stringify({ error: "Ticket already used" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      return new Response(JSON.stringify({ error: "Ticket already used", used: true }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
