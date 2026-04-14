@@ -7,6 +7,7 @@ interface SeatLayoutProps {
   availableSeats: number;
   onSelect: (seat: string) => void;
   selectedSeat: string | null;
+  bookedSeats?: string[];
 }
 
 function generateSeats(category: string | null, total: number) {
