@@ -73,21 +73,17 @@ export default function EventDetails() {
 
       // Step 2: Book in database (only reached if chain mint succeeded or no wallet)
       setBookingStep('confirm');
-      const { data, error } = await supabase.rpc('book_ticket', {
-        p_event_id: id!,
-        p_user_id: user.id,
-        p_wallet_address: walletAddress || undefined,
+      const { data, error } = await supabase.functions.invoke('book-ticket', {
+        body: {
+          eventId: id!,
+          seatNumber: selectedSeat,
+          walletAddress: walletAddress || null,
+          nftTokenId: nftTokenId ? String(nftTokenId) : null,
+        },
       });
       if (error) throw error;
 
-      // Update seat number
-      if (data) {
-        await supabase.from('tickets').update({ seat_number: selectedSeat } as any).eq('id', data);
-      }
-
-      // Save NFT token ID if minted
-      if (data && nftTokenId) {
-        await supabase.from('tickets').update({ nft_token_id: String(nftTokenId) }).eq('id', data);
+      if (data?.ticketRowId && nftTokenId) {
         toast({ title: 'On-Chain Ticket Minted! ⛓️', description: `NFT Token #${nftTokenId} created on Sepolia.` });
       }
 
