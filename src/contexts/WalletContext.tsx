@@ -32,11 +32,53 @@ const CHAIN_NAMES: Record<string, string> = {
   '0x38': 'BSC',
 };
 
+const SEPOLIA_CHAIN_ID = '0xaa36a7';
+const SEPOLIA_NETWORK_PARAMS = {
+  chainId: SEPOLIA_CHAIN_ID,
+  chainName: 'Sepolia Testnet',
+  nativeCurrency: {
+    name: 'SepoliaETH',
+    symbol: 'ETH',
+    decimals: 18,
+  },
+  rpcUrls: ['https://rpc.sepolia.org'],
+  blockExplorerUrls: ['https://sepolia.etherscan.io'],
+};
+
 export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const [chainName, setChainName] = useState<string | null>(null);
   const { updateWalletAddress, user, profile } = useAuth();
+
+  const ensureSepoliaNetwork = useCallback(async () => {
+    if (!window.ethereum) throw new Error('MetaMask is not installed');
+
+    const currentChainId = await window.ethereum.request({ method: 'eth_chainId' });
+    if (currentChainId === SEPOLIA_CHAIN_ID) return currentChainId;
+
+    try {
+      await window.ethereum.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: SEPOLIA_CHAIN_ID }],
+      });
+      return SEPOLIA_CHAIN_ID;
+    } catch (error: any) {
+      if (error?.code === 4902) {
+        await window.ethereum.request({
+          method: 'wallet_addEthereumChain',
+          params: [SEPOLIA_NETWORK_PARAMS],
+        });
+        return SEPOLIA_CHAIN_ID;
+      }
+
+      if (error?.code === 4001) {
+        throw new Error('Please switch MetaMask to Sepolia to continue.');
+      }
+
+      throw error;
+    }
+  }, []);
 
   // Restore wallet on load if profile has one
   useEffect(() => {
@@ -51,6 +93,12 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }).catch(() => {});
     }
   }, [profile, walletAddress]);
+
+  useEffect(() => {
+    if (user && walletAddress && profile?.wallet_address?.toLowerCase() !== walletAddress.toLowerCase()) {
+      updateWalletAddress(walletAddress).catch(() => {});
+    }
+  }, [user, walletAddress, profile?.wallet_address, updateWalletAddress]);
 
   // Listen for account/chain changes
   useEffect(() => {
@@ -89,9 +137,9 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     try {
       const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
       const address = accounts[0];
-      setWalletAddress(address);
+      const chainId = await ensureSepoliaNetwork();
 
-      const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+      setWalletAddress(address);
       setChainName(CHAIN_NAMES[chainId] || `Chain ${parseInt(chainId, 16)}`);
 
       if (user) await updateWalletAddress(address);
@@ -109,7 +157,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     } finally {
       setIsConnecting(false);
     }
-  }, [user, updateWalletAddress]);
+  }, [ensureSepoliaNetwork, user, updateWalletAddress]);
 
   const disconnectWallet = useCallback(() => {
     setWalletAddress(null);

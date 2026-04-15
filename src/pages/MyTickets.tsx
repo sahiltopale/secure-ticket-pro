@@ -35,7 +35,7 @@ export default function MyTickets() {
       .channel('my-tickets')
       .on(
         'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'tickets', filter: `user_id=eq.${user.id}` },
+        { event: '*', schema: 'public', table: 'tickets' },
         () => { fetchTickets(); }
       )
       .subscribe();
