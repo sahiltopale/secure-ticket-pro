@@ -29,10 +29,10 @@ export default function EventDetails() {
   const fetchEventAndSeats = async () => {
     const [{ data: eventData }, { data: seatsData }] = await Promise.all([
       supabase.from('events').select('*').eq('id', id!).single(),
-      supabase.from('tickets').select('seat_number').eq('event_id', id!).not('seat_number', 'is', null),
+      supabase.rpc('get_booked_seats', { p_event_id: id! }),
     ]);
     setEvent(eventData);
-    setBookedSeats((seatsData || []).map((t: any) => t.seat_number));
+    setBookedSeats((seatsData as string[]) || []);
     setLoading(false);
   };
 
