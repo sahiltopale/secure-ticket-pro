@@ -170,6 +170,7 @@ export type Database = {
         }
         Returns: string
       }
+      get_booked_seats: { Args: { p_event_id: string }; Returns: string[] }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
