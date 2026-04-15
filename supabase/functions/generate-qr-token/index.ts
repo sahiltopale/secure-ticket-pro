@@ -74,9 +74,9 @@ Deno.serve(async (req) => {
     const timestamp = Math.floor(Date.now() / 1000);
     const window = Math.floor(timestamp / 30); // 30-second windows
     const secret = serviceKey;
-    const token = await hmacSign(secret, `${ticketId}:${window}`);
+    const qrToken = await hmacSign(secret, `${ticketId}:${window}`);
 
-    return new Response(JSON.stringify({ token, timestamp, expiresIn: 30 }), {
+    return new Response(JSON.stringify({ token: qrToken, timestamp, expiresIn: 30 }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
