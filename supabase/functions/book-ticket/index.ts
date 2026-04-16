@@ -12,7 +12,7 @@ type BookTicketBody = {
   nftTokenId?: string | null;
 };
 
-async function restoreAvailability(adminClient: ReturnType<typeof createClient>, eventId: string, ticketRowId: string) {
+async function restoreAvailability(adminClient: any, eventId: string, ticketRowId: string) {
   await adminClient.from("tickets").delete().eq("id", ticketRowId);
 
   const { data: eventRow } = await adminClient
@@ -24,7 +24,7 @@ async function restoreAvailability(adminClient: ReturnType<typeof createClient>,
   if (eventRow) {
     await adminClient
       .from("events")
-      .update({ available_seats: Number(eventRow.available_seats) + 1 })
+      .update({ available_seats: Number((eventRow as any).available_seats) + 1 })
       .eq("id", eventId);
   }
 }

@@ -128,9 +128,9 @@ Deno.serve(async (req) => {
       JSON.stringify({ valid: true, message: "Ticket verified successfully!", ticket: ticketInfo }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-  } catch (err) {
+  } catch (err: unknown) {
     return new Response(
-      JSON.stringify({ valid: false, message: "Verification failed: " + err.message }),
+      JSON.stringify({ valid: false, message: "Verification failed: " + (err instanceof Error ? err.message : "Unknown error") }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
