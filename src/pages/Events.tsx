@@ -17,7 +17,13 @@ export default function EventsPage() {
 
   useEffect(() => {
     const fetchEvents = async () => {
-      let query = supabase.from('events').select('*').order('date', { ascending: true });
+      // Hide events whose date/time has already passed (real-time, timezone-safe via timestamptz)
+      const nowIso = new Date().toISOString();
+      let query = supabase
+        .from('events')
+        .select('*')
+        .gte('date', nowIso)
+        .order('date', { ascending: true });
       if (search) query = query.ilike('title', `%${search}%`);
       if (category !== 'all') query = query.eq('category', category);
       const { data } = await query;
@@ -25,6 +31,9 @@ export default function EventsPage() {
       setLoading(false);
     };
     fetchEvents();
+    // Re-check every minute so events disappear in real time as they expire
+    const interval = setInterval(fetchEvents, 60_000);
+    return () => clearInterval(interval);
   }, [search, category]);
 
   return (
